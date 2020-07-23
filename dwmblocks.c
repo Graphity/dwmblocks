@@ -15,6 +15,7 @@ typedef struct {
 } Block;
 void dummysighandler(int num);
 void sighandler(int num);
+void remove_all(char *str, char to_remove);
 void getcmds(int time);
 #ifndef __OpenBSD__
 void getsigcmds(int signal);
@@ -37,6 +38,19 @@ static char statusstr[2][256];
 static int statusContinue = 1;
 static void (*writestatus) () = setroot;
 
+void remove_all(char *str, char to_remove) {
+	char *read = str;
+	char *write = str;
+	while (*read) {
+		if (*read == to_remove) {
+			read++;
+			*write = *read;
+		}
+		read++;
+		write++;
+	}
+}
+
 //opens process *cmd and stores output in *output
 void getcmd(const Block *block, char *output)
 {
@@ -47,10 +61,14 @@ void getcmd(const Block *block, char *output)
 		return;
 	char c;
 	int i = strlen(block->icon);
-	fgets(output+i, CMDLENGTH-i, cmdf);
+	fgets(output+i, CMDLENGTH-(strlen(delim)+1), cmdf);
+	
 	i = strlen(output);
-	if (delim != '\0' && --i)
-		output[i++] = delim;
+	if ((i > 0 && block != &blocks[LENGTH(blocks) - 1])){
+	        remove_all(output, '\n');
+		strcat(output, delim);
+	}
+	i+=strlen(delim);
 	output[i++] = '\0';
 	pclose(cmdf);
 }
@@ -169,7 +187,7 @@ int main(int argc, char** argv)
 	for(int i = 0; i < argc; i++)
 	{
 		if (!strcmp("-d",argv[i]))
-			delim = argv[++i][0];
+			delim = argv[++i];
 		else if(!strcmp("-p",argv[i]))
 			writestatus = pstdout;
 	}
